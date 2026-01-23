@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class MediaService {
-  getHello(): string {
-    return 'Hello World!';
+  ping() {
+    return {
+      status: 'Ok',
+      service: 'media',
+      now: new Date().toLocaleDateString(),
+    };
   }
 }

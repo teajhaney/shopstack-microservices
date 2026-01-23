@@ -1,8 +1,20 @@
 import { NestFactory } from '@nestjs/core';
 import { GatewayModule } from './gateway.module';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
+  process.title = 'gateway';
+
+  const logger = new Logger('GatewayBootstrap');
   const app = await NestFactory.create(GatewayModule);
-  await app.listen(process.env.port ?? 3000);
+
+  app.enableShutdownHooks();
+  const port = Number(process.env.GATEWAY_PORT ?? 3000);
+  await app.listen(port);
+  logger.log(`Gateway is listening on port ${port}`);
 }
-bootstrap();
+
+bootstrap().catch((err) => {
+  console.error('Error during Gateway bootstrap:', err);
+  process.exit(1);
+});

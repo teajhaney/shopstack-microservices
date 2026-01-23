@@ -5,8 +5,12 @@ import { GatewayService } from './gateway.service';
 export class GatewayController {
   constructor(private readonly gatewayService: GatewayService) {}
 
-  @Get()
-  getHello(): string {
-    return this.gatewayService.getHello();
+  @Get('health')
+  health() {
+    return {
+      status: 'ok',
+      service: 'gateway',
+      timestamp: new Date().toLocaleDateString(),
+    };
   }
 }

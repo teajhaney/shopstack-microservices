@@ -11,14 +11,14 @@ export class UsersService {
 
   // Upsert user from auth provider info
   async upsertAuthUser(input: {
-    clerkUserUdid: string;
+    clerkUserId: string;
     email: string;
     name: string;
   }): Promise<User> {
     const now = new Date();
     return this.userModel
       .findOneAndUpdate(
-        { clerkUserid: input.clerkUserUdid },
+        { clerkUserId: input.clerkUserId },
         {
           $set: {
             email: input.email,
@@ -39,7 +39,7 @@ export class UsersService {
   }
 
   // Find user by clerkUserid
-  async findByClerkUserId(clerkUserid: string): Promise<User | null> {
-    return this.userModel.findOne({ clerkUserid }).exec();
+  async findByClerkUserId(clerkUserId: string): Promise<User | null> {
+    return this.userModel.findOne({ clerkUserId }).exec();
   }
 }

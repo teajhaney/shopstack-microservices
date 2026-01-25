@@ -1,5 +1,6 @@
 import { createClerkClient, verifyToken } from '@clerk/backend';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { VerifiedAuthUser } from './auth.types';
 
 interface JWTPayload {
   sub?: string;
@@ -19,7 +20,7 @@ export class AuthService {
     };
   }
 
-  async verifyToken(token: string) {
+  async verifyToken(token: string): Promise<VerifiedAuthUser> {
     try {
       const verifiedToken = await verifyToken(token, this.jwtVerifyOptions());
       //decoded payload
@@ -38,15 +39,18 @@ export class AuthService {
       const role: 'user' | 'admin' = 'user';
 
       const emailFromToken =
-        typedPayload?.email ??
-        typedPayload?.email_address ??
-        typedPayload.primaryEmailAddress ??
-        '';
+        typeof typedPayload.email === 'string'
+          ? typedPayload.email
+          : typeof typedPayload.email_address === 'string'
+            ? typedPayload.email_address
+            : '';
+
       const nameFromToken =
-        typedPayload?.name ??
-        typedPayload?.username ??
-        typedPayload?.fullName ??
-        '';
+        typeof typedPayload.name === 'string'
+          ? typedPayload.name
+          : typeof typedPayload.username === 'string'
+            ? typedPayload.username
+            : '';
 
       if (emailFromToken && nameFromToken) {
         return {
@@ -76,8 +80,8 @@ export class AuthService {
         role,
       };
     } catch (error) {
-      throw new UnauthorizedException('Invalid or Expired token');
       console.log(error);
+      throw new UnauthorizedException('Invalid or Expired token');
     }
   }
 }

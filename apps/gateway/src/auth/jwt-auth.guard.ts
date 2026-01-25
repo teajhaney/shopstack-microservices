@@ -53,7 +53,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     //verify token and extract user info
-    const authUser = await this.authService.verifyToken(token);
+    const authUser = await this.authService.verifyTokenAndBuildContext(token);
 
     const dbUser = await this.usersService.upsertAuthUser({
       clerkUserId: authUser.clerkUserId,

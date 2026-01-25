@@ -20,7 +20,8 @@ export class AuthService {
     };
   }
 
-  async verifyToken(token: string): Promise<VerifiedAuthUser> {
+  // Verify token and build user context
+  async verifyTokenAndBuildContext(token: string): Promise<VerifiedAuthUser> {
     try {
       const verifiedToken = await verifyToken(token, this.jwtVerifyOptions());
       //decoded payload

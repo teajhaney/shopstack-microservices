@@ -20,7 +20,7 @@ export class ProductService {
   async create(createProductDto: CreateProductDto): Promise<ProductDument> {
     const { name, description, price, status, imageUrl, createdByClerkUserId } =
       createProductDto;
-    if (!name || !description || !price || !createdByClerkUserId) {
+    if (!name || !description || !price) {
       rpcBadRequest('Missing required fields');
     }
 

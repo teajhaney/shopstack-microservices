@@ -6,6 +6,8 @@ import {
   CreateProductDto,
   GetProdctByIdDto,
   UpdateProductDto,
+  ListProductsDto,
+  PaginatedProductsResponse,
 } from './product.dto';
 import { rpcBadRequest } from '@app/rpc';
 
@@ -43,9 +45,42 @@ export class ProductService {
     return createdProdct;
   }
 
-  // List products
-  async listProducts(): Promise<ProductDument[]> {
-    return await this.productModel.find().sort({ createdAt: -1 }).exec();
+  // List products with pagination
+  async listProducts(
+    listProductsDto: ListProductsDto,
+  ): Promise<PaginatedProductsResponse> {
+    const { page = 1, limit = 10 } = listProductsDto;
+
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination metadata
+    const total = await this.productModel.countDocuments().exec();
+
+    // Get paginated products
+    const products = await this.productModel
+      .find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
+
+    return {
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev,
+      },
+    };
   }
 
   // Get product by id

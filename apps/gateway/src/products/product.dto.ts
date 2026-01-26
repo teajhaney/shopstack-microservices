@@ -52,3 +52,27 @@ export class GetProdctByIdDto {
   @IsString()
   id: string;
 }
+
+export class ListProductsDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  limit?: number = 10;
+}
+
+export class PaginatedProductsResponse {
+  products: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}

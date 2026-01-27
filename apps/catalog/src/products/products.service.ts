@@ -109,34 +109,37 @@ export class ProductService {
     }
     const { name, description, price, status, imageUrl } = updateProductDto;
 
-    if (!name || !description || !price || !status || !imageUrl) {
-      rpcBadRequest('No fields to update');
+    const update: Partial<CreateProductDto> = {};
+
+    if (name !== undefined) update.name = name;
+    if (description !== undefined) update.description = description;
+    if (price !== undefined) update.price = price;
+    if (status !== undefined) update.status = status;
+    if (imageUrl !== undefined) update.imageUrl = imageUrl;
+
+    if (Object.keys(update).length === 0) {
+      throw new rpcBadRequest('No fields to update');
     }
+
     const updatedProduct = await this.productModel.findByIdAndUpdate(
       id,
-      {
-        name,
-        description,
-        price,
-        status,
-        imageUrl,
-      },
+      update,
       { new: true },
     );
-    return updatedProduct;
+    if (!updatedProduct) {
+      throw new rpcBadRequest('Product not found');
+    }
+    return updatedProduct?.toObject();
   }
 
   //Delete product by Id
-  async deleteProductById(
-    delectProdctByIdDto: GetProdctByIdDto,
-  ): Promise<ProductDument | null> {
+  async deleteProductById(delectProdctByIdDto: GetProdctByIdDto) {
     if (!isValidObjectId(delectProdctByIdDto.id)) {
       rpcBadRequest('Invalid product id');
     }
-
-    const deletedProduct = await this.productModel.findByIdAndDelete(
-      delectProdctByIdDto.id,
-    );
-    return deletedProduct;
+    await this.productModel.findByIdAndDelete(delectProdctByIdDto.id);
+    return {
+      message: 'Product deleted successfully',
+    };
   }
 }

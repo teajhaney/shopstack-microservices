@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { CurrentUser } from '../auth/current.user.decorator';
 import type { UserContext } from '../auth/auth.types';
-import { CreateProductDto } from './product.dto';
+import { CreateProductDto, UpdateProductDto } from './product.dto';
 import { mapRpcErrorToHttp } from '@app/rpc';
 import { firstValueFrom } from 'rxjs';
+import { AdminOnly } from '../auth/admin.decorator';
 
 type Product = {
   _id: string;
@@ -35,6 +46,7 @@ export class ProductsHttpController {
   ) {}
 
   @Post()
+  @AdminOnly()
   async createProduct(
     @CurrentUser() user: UserContext,
     @Body() createProductDto: CreateProductDto,
@@ -57,10 +69,10 @@ export class ProductsHttpController {
       prodduct = await firstValueFrom(
         this.catalogClient.send<Product>('product.create', payload),
       );
+      return prodduct;
     } catch (error) {
       mapRpcErrorToHttp(error);
     }
-    return prodduct;
   }
 
   @Get('list')
@@ -81,6 +93,64 @@ export class ProductsHttpController {
         ),
       );
       return result;
+    } catch (error) {
+      mapRpcErrorToHttp(error);
+    }
+  }
+
+  @Get(':id')
+  async getProductById(@Param('id') id: string) {
+    let product: Product;
+    const payload = { id };
+    try {
+      product = await firstValueFrom(
+        this.catalogClient.send<Product>('product.get', payload),
+      );
+      return product;
+    } catch (error) {
+      mapRpcErrorToHttp(error);
+    }
+  }
+
+  @Patch(':id')
+  @AdminOnly()
+  async updateProductById(
+    @Param('id') id: string,
+    @Body() updateProductDto: UpdateProductDto,
+  ) {
+    const { name, description, price, imageUrl, status } = updateProductDto;
+    let updatedProduct: Product;
+    const payload = {
+      id,
+      data: {
+        name,
+        description,
+        price,
+        imageUrl,
+        status,
+      },
+    };
+
+    try {
+      updatedProduct = await firstValueFrom(
+        this.catalogClient.send<Product>('product.update', payload),
+      );
+      return updatedProduct;
+    } catch (error) {
+      mapRpcErrorToHttp(error);
+    }
+  }
+  @Delete(':id')
+  @AdminOnly()
+  async delectProductById(@Param('id') id: string) {
+    const payload = {
+      id,
+    };
+
+    try {
+      return await firstValueFrom(
+        this.catalogClient.send<Product>('product.delete', payload),
+      );
     } catch (error) {
       mapRpcErrorToHttp(error);
     }

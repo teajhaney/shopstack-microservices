@@ -8,6 +8,8 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { CurrentUser } from '../auth/current.user.decorator';
@@ -16,8 +18,9 @@ import { CreateProductDto, UpdateProductDto } from './product.dto';
 import { mapRpcErrorToHttp } from '@app/rpc';
 import { firstValueFrom } from 'rxjs';
 import { AdminOnly } from '../auth/admin.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
 
-type Product = {
+export type Product = {
   _id: string;
   name: string;
   description: string;
@@ -25,6 +28,16 @@ type Product = {
   status: 'DRAFT' | 'ACTIVE';
   imageUrl: string;
   createdByClerkUserId: string;
+};
+export type UploadProductResponse = {
+  url: string;
+  mediaId: string;
+};
+
+export type AttachedToProductResponse = {
+  mediaId: string;
+  productId: string;
+  attchedByUserId: string;
 };
 
 export class PaginatedProductsResponse {
@@ -43,17 +56,53 @@ export class PaginatedProductsResponse {
 export class ProductsHttpController {
   constructor(
     @Inject('CATALOG_CLIENT') private readonly catalogClient: ClientProxy,
+    @Inject('MEDIA_CLIENT') private readonly mediaClient: ClientProxy,
   ) {}
 
   @Post()
   @AdminOnly()
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: 1024 * 1024 * 5,
+      },
+    }),
+  )
   async createProduct(
     @CurrentUser() user: UserContext,
+    @UploadedFile() file: Express.Multer.File | undefined,
     @Body() createProductDto: CreateProductDto,
   ) {
-    const { name, description, price, imageUrl, status } = createProductDto;
+    const { name, description, price, status } = createProductDto;
+    let imageUrl = createProductDto.imageUrl;
+    let mediaId: string | undefined = undefined;
 
-    let prodduct: Product;
+    if (file) {
+      const base64 = file.buffer.toString('base64');
+
+		
+		//upload image to cloudinary and add to db
+      try {
+        const uploadResult: { url: string; mediaId: string } =
+          await firstValueFrom(
+            this.mediaClient.send<UploadProductResponse>(
+              'media.uploadProductImage',
+              {
+                fileName: file.originalname,
+                mimeType: file.mimetype,
+                base64,
+                uploadByUserId: user.clerkUserId,
+              },
+            ),
+          );
+        imageUrl = uploadResult.url;
+        mediaId = uploadResult.mediaId;
+      } catch (error) {
+        mapRpcErrorToHttp(error);
+      }
+    }
+
+    let product: Product;
 
     const payload = {
       name,
@@ -64,15 +113,34 @@ export class ProductsHttpController {
       createdByClerkUserId: user.clerkUserId,
     };
 
-    // RMQ request and response pattern
+    // RMQ request and response pattern, create product with or without image
     try {
-      prodduct = await firstValueFrom(
+      product = await firstValueFrom(
         this.catalogClient.send<Product>('product.create', payload),
       );
-      return prodduct;
     } catch (error) {
       mapRpcErrorToHttp(error);
     }
+
+	  
+	  //add product Id to image 
+    if (mediaId && product) {
+      try {
+        await firstValueFrom(
+          this.mediaClient.send<AttachedToProductResponse>(
+            'media.attachToProduct',
+            {
+              mediaId,
+              productId: String(product._id),
+              attchedByUserId: user.clerkUserId,
+            },
+          ),
+        );
+      } catch (error) {
+        mapRpcErrorToHttp(error);
+      }
+    }
+    return product;
   }
 
   @Get('list')

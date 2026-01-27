@@ -3,7 +3,7 @@ import { ProductService } from './products.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   CreateProductDto,
-  GetProdctByIdDto,
+  GetProductByIdDto,
   ListProductsDto,
 } from './product.dto';
 
@@ -22,7 +22,7 @@ export class ProductController {
   }
 
   @MessagePattern('product.get')
-  getById(@Payload() payload: GetProdctByIdDto) {
+  getById(@Payload() payload: GetProductByIdDto) {
     return this.productService.getProductById(payload);
   }
 
@@ -32,7 +32,7 @@ export class ProductController {
   }
 
   @MessagePattern('product.delete')
-  delete(@Payload() payload: GetProdctByIdDto) {
+  delete(@Payload() payload: GetProductByIdDto) {
     return this.productService.deleteProductById(payload);
   }
 }

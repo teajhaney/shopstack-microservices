@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { GatewayModule } from './gateway.module';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   process.title = 'gateway';
@@ -8,6 +8,14 @@ async function bootstrap() {
   const logger = new Logger('GatewayBootstrap');
   const app = await NestFactory.create(GatewayModule);
 
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
   app.enableShutdownHooks();
   const port = Number(process.env.GATEWAY_PORT ?? 3000);
   await app.listen(port);

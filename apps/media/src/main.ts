@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { MediaModule } from './media.module';
+import { applyToMicroservicelayer } from '@app/rpc';
 
 async function bootstrap() {
   process.title = 'media';
@@ -22,6 +23,8 @@ async function bootstrap() {
       },
     },
   );
+
+  applyToMicroservicelayer(app);
   app.enableShutdownHooks();
   await app.listen();
   logger.log(`Media RMQ is listening on queue: ${queue} via ${rmqUrl}`);

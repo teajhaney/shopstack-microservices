@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Product, ProductDument } from './product.schema';
+import { Product, ProductDocument } from './product.schema';
 import { isValidObjectId, Model } from 'mongoose';
 import {
   CreateProductDto,
-  GetProdctByIdDto,
+  GetProductByIdDto,
   UpdateProductDto,
   ListProductsDto,
   PaginatedProductsResponse,
@@ -15,11 +15,11 @@ import { rpcBadRequest } from '@app/rpc';
 export class ProductService {
   constructor(
     @InjectModel(Product.name)
-    private readonly productModel: Model<ProductDument>,
+    private readonly productModel: Model<ProductDocument>,
   ) {}
 
   // Create a new product
-  async create(createProductDto: CreateProductDto): Promise<ProductDument> {
+  async create(createProductDto: CreateProductDto): Promise<ProductDocument> {
     const { name, description, price, status, imageUrl, createdByClerkUserId } =
       createProductDto;
     if (!name || !description || !price) {
@@ -34,7 +34,7 @@ export class ProductService {
       rpcBadRequest('Status must be either DRAFT or ACTIVE');
     }
 
-    const createdProdct = await this.productModel.create({
+    const createdProduct = await this.productModel.create({
       name,
       description,
       price,
@@ -42,7 +42,7 @@ export class ProductService {
       imageUrl: imageUrl || '',
       createdByClerkUserId,
     });
-    return createdProdct;
+    return createdProduct;
   }
 
   // List products with pagination
@@ -85,13 +85,13 @@ export class ProductService {
 
   // Get product by id
   async getProductById(
-    getProdctByIdDto: GetProdctByIdDto,
-  ): Promise<ProductDument | null> {
-    if (!isValidObjectId(getProdctByIdDto.id)) {
+    getProductByIdDto: GetProductByIdDto,
+  ): Promise<ProductDocument | null> {
+    if (!isValidObjectId(getProductByIdDto.id)) {
       rpcBadRequest('Invalid product id');
     }
     const product = await this.productModel
-      .findById(getProdctByIdDto.id)
+      .findById(getProductByIdDto.id)
       .exec();
 
     if (!product) rpcBadRequest('Product not found');
@@ -103,7 +103,7 @@ export class ProductService {
   async updateProductById(
     id: string,
     updateProductDto: UpdateProductDto,
-  ): Promise<ProductDument | null> {
+  ): Promise<ProductDocument | null> {
     if (!isValidObjectId(id)) {
       rpcBadRequest('Invalid product id');
     }
@@ -118,7 +118,7 @@ export class ProductService {
     if (imageUrl !== undefined) update.imageUrl = imageUrl;
 
     if (Object.keys(update).length === 0) {
-      throw new rpcBadRequest('No fields to update');
+      rpcBadRequest('No fields to update');
     }
 
     const updatedProduct = await this.productModel.findByIdAndUpdate(
@@ -127,17 +127,17 @@ export class ProductService {
       { new: true },
     );
     if (!updatedProduct) {
-      throw new rpcBadRequest('Product not found');
+      rpcBadRequest('Product not found');
     }
-    return updatedProduct?.toObject();
+    return updatedProduct.toObject();
   }
 
   //Delete product by Id
-  async deleteProductById(delectProdctByIdDto: GetProdctByIdDto) {
-    if (!isValidObjectId(delectProdctByIdDto.id)) {
+  async deleteProductById(deleteProductByIdDto: GetProductByIdDto) {
+    if (!isValidObjectId(deleteProductByIdDto.id)) {
       rpcBadRequest('Invalid product id');
     }
-    await this.productModel.findByIdAndDelete(delectProdctByIdDto.id);
+    await this.productModel.findByIdAndDelete(deleteProductByIdDto.id);
     return {
       message: 'Product deleted successfully',
     };

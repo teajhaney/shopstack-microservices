@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 export type ProductStatus = 'DRAFT' | 'ACTIVE';
 
 export class CreateProductDto {
@@ -11,6 +11,7 @@ export class CreateProductDto {
 
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   price: number;
 
   @IsOptional()
@@ -20,9 +21,6 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   imageUrl?: string;
-
-  @IsString()
-  createdByClerkUserId: string;
 }
 
 export class UpdateProductDto {
@@ -37,6 +35,7 @@ export class UpdateProductDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
+  @Type(() => Number)
   price?: number;
 
   @IsOptional()

@@ -48,7 +48,7 @@ export class UpdateProductDto {
   imageUrl?: string;
 }
 
-export class GetProdctByIdDto {
+export class GetProductByIdDto {
   @IsString()
   id: string;
 }

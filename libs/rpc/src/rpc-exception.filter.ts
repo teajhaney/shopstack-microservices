@@ -8,28 +8,45 @@ import { RpcErrorPayLoad } from './rpc.types';
 // our payload structure should follow the RpcErrorPayLoad interface we want
 @Catch()
 export class RpcAllExceptionsFilter extends BaseRpcExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     if (exception instanceof RpcException) {
       return super.catch(exception, host);
     }
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const status = exception?.getStatus?.();
 
-    if (status === 400) {
-      const payload: RpcErrorPayLoad = {
-        code: 'VALIDATION_ERROR',
-        message: 'validation failed',
-        details: response,
+    console.error('[RpcAllExceptionsFilter] Exception caught:', exception);
+
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : exception?.status || 500;
+
+    const message =
+      exception instanceof Error
+        ? exception.message
+        : typeof exception === 'string'
+          ? exception
+          : 'Internal Error';
+
+    // Sanitize response/details to avoid circular references (like RMQ Channels)
+    let details: any = undefined;
+    if (exception instanceof HttpException) {
+      const resp = exception.getResponse();
+      details = typeof resp === 'object' ? resp : { message: resp };
+    } else if (exception instanceof Error) {
+      details = {
+        message: exception.message,
+        stack: exception.stack,
       };
-      return super.catch(new RpcException(payload), host);
+    } else {
+      details = exception;
     }
 
     const payload: RpcErrorPayLoad = {
-      code: 'INTERNAL',
-      message: 'Internal Error',
-      details: exception,
+      code: status === 400 ? 'VALIDATION_ERROR' : 'INTERNAL',
+      message: status === 400 ? 'validation failed' : message,
+      details,
     };
+
     return super.catch(new RpcException(payload), host);
   }
 }

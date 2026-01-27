@@ -36,7 +36,7 @@ export function mapRpcErrorToHttp(error: unknown): never {
       typeof payload.message === 'string' ? payload.message : 'Request failed';
 
     if (code === 'VALIDATION_ERROR' || code === 'BAD_REQUEST') {
-      throw new BadRequestException(message);
+      throw new BadRequestException(payload.details ?? message);
     }
     if (code === 'UNAUTHORIZED') {
       throw new UnauthorizedException(message);
@@ -58,6 +58,7 @@ export function mapRpcErrorToHttp(error: unknown): never {
 export type RpcErrorLike = {
   code?: unknown;
   message?: unknown;
+  details?: unknown;
 };
 
 export function isRpcErrorLike(value: unknown): value is RpcErrorLike {

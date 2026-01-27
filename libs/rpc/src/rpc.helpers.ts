@@ -1,7 +1,7 @@
 import { RpcException } from '@nestjs/microservices';
 import { RpcErrorPayLoad } from './rpc.types';
 
-export function rpcBadRequest(message: string, details?: unknown) {
+export function rpcBadRequest(message: string, details?: unknown): never {
   const errorPayload: RpcErrorPayLoad = {
     code: 'BAD_REQUEST',
     message,
@@ -10,7 +10,7 @@ export function rpcBadRequest(message: string, details?: unknown) {
   throw new RpcException(errorPayload);
 }
 
-export function rpcUnauthorized(message: string, details?: unknown) {
+export function rpcUnauthorized(message: string, details?: unknown): never {
   const errorPayload: RpcErrorPayLoad = {
     code: 'UNAUTHORIZED',
     message,
@@ -19,7 +19,7 @@ export function rpcUnauthorized(message: string, details?: unknown) {
   throw new RpcException(errorPayload);
 }
 
-export function rpcForbidden(message: 'forbidden', details?: unknown) {
+export function rpcForbidden(message: 'forbidden', details?: unknown): never {
   const errorPayload: RpcErrorPayLoad = {
     code: 'FORBIDDEN',
     message,
@@ -28,7 +28,7 @@ export function rpcForbidden(message: 'forbidden', details?: unknown) {
   throw new RpcException(errorPayload);
 }
 
-export function rpcNotFound(message: string, details?: unknown) {
+export function rpcNotFound(message: string, details?: unknown): never {
   const errorPayload: RpcErrorPayLoad = {
     code: 'NOT_FOUND',
     message,
@@ -37,7 +37,7 @@ export function rpcNotFound(message: string, details?: unknown) {
   throw new RpcException(errorPayload);
 }
 
-export function rpcInternal(message: 'Internal Error', details?: unknown) {
+export function rpcInternal(message: 'Internal Error', details?: unknown): never {
   const errorPayload: RpcErrorPayLoad = {
     code: 'INTERNAL',
     message,
@@ -46,7 +46,7 @@ export function rpcInternal(message: 'Internal Error', details?: unknown) {
   throw new RpcException(errorPayload);
 }
 
-export function rpcValidationError(message: string, details?: unknown) {
+export function rpcValidationError(message: string, details?: unknown): never {
   const errorPayload: RpcErrorPayLoad = {
     code: 'VALIDATION_ERROR',
     message,
@@ -54,3 +54,4 @@ export function rpcValidationError(message: string, details?: unknown) {
   };
   throw new RpcException(errorPayload);
 }
+

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from './product.schema';
 import { isValidObjectId, Model } from 'mongoose';
@@ -14,6 +14,8 @@ import { ProductEventsPublisher } from '../events/product-events.publisher';
 
 @Injectable()
 export class ProductService {
+  private readonly logger = new Logger(ProductService.name);
+
   constructor(
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
@@ -44,6 +46,8 @@ export class ProductService {
       imageUrl: imageUrl || '',
       createdByClerkUserId,
     });
+
+    this.logger.log(`Product created successfully: ${createdProduct._id}`);
 
     //emit event to search microservice
     this.event.productCreated({
@@ -141,8 +145,10 @@ export class ProductService {
       { new: true },
     );
     if (!updatedProduct) {
+      this.logger.warn(`Update failed: Product not found ${id}`);
       rpcBadRequest('Product not found');
     }
+    this.logger.log(`Product updated successfully: ${id}`);
     return updatedProduct.toObject();
   }
 
@@ -152,6 +158,11 @@ export class ProductService {
       rpcBadRequest('Invalid product id');
     }
     await this.productModel.findByIdAndDelete(deleteProductByIdDto.id);
+    this.logger.log(`Product deleted from DB: ${deleteProductByIdDto.id}`);
+
+    //emit event to search and media microservices for cleanup
+    this.event.productDeleted(deleteProductByIdDto.id);
+
     return {
       message: 'Product deleted successfully',
     };

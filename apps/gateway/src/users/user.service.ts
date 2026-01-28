@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { User, UserDocument } from './user.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
@@ -14,9 +16,9 @@ export class UsersService {
     clerkUserId: string;
     email: string;
     name: string;
-  }): Promise<User> {
+  }): Promise<UserDocument> {
     const now = new Date();
-    return this.userModel
+    const user = await this.userModel
       .findOneAndUpdate(
         { clerkUserId: input.clerkUserId },
         {
@@ -36,6 +38,12 @@ export class UsersService {
         },
       )
       .exec();
+
+    if (user) {
+      this.logger.log(`User upserted: ${input.clerkUserId} (Role: ${user.role})`);
+    }
+
+    return user!;
   }
 
   // Find user by clerkUserid

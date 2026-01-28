@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Search, SearchDocument } from './search/search.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -7,6 +7,8 @@ import { SearchQueryDto } from './search/search-query.dto';
 
 @Injectable()
 export class SearchService {
+  private readonly logger = new Logger(SearchService.name);
+
   constructor(
     @InjectModel(Search.name)
     private readonly searchModel: Model<SearchDocument>,
@@ -16,6 +18,7 @@ export class SearchService {
     return `${input.name}: ${input.description}`.toLowerCase();
   }
 
+  //upsert product in search index
   async upsertFromProductCreation(input: ProductCreatedDto) {
     const normalisedText = this.normalisedText({
       name: input.name,
@@ -37,8 +40,16 @@ export class SearchService {
       },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
+    this.logger.log(`Search index upserted for product: ${input.productId}`);
   }
 
+  //delete product from search index
+  async deleteByProductId(productId: string) {
+    const result = await this.searchModel.deleteMany({ productId }).exec();
+    this.logger.log(`Search index deleted for product: ${productId} (Removed: ${result.deletedCount})`);
+  }
+
+  //search products
   async query(input: SearchQueryDto) {
     const query = (input.query ?? '').toLowerCase();
 
@@ -85,6 +96,8 @@ export class SearchService {
     ]);
 
     const totalPages = Math.ceil(total / limit);
+
+    this.logger.log(`Executed search query - Found: ${total} results`);
 
     return {
       products,

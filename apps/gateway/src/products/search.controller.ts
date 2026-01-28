@@ -1,6 +1,6 @@
 //This controller is for the gateway to handle requests from the client to the search microservice which contains the business logic for search
 
-import { Controller, Get, Inject, Query } from '@nestjs/common';
+import { Controller, Get, Inject, Logger, Query } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 import { PaginatedProductsResponse } from './product.dto';
@@ -10,6 +10,8 @@ import { Public } from '../auth/public.decorator';
 
 @Controller('search')
 export class SearchHttpController {
+  private readonly logger = new Logger(SearchHttpController.name);
+
   constructor(
     @Inject('SEARCH_CLIENT') private readonly searchClient: ClientProxy,
   ) {}
@@ -21,6 +23,7 @@ export class SearchHttpController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    this.logger.log(`Searching products (page: ${page}, limit: ${limit})`);
     try {
       const payload = {
         query,

@@ -21,6 +21,17 @@ import { ProductEventsPublisher } from '../events/product-events.publisher';
           },
         },
       },
+      {
+        name: 'MEDIA_EVENT_CLIENT',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL ?? 'amqp://localhost:5672'],
+          queue: process.env.MEDIA_QUEUE ?? 'media_queue',
+          queueOptions: {
+            durable: false,
+          },
+        },
+      },
     ]),
   ],
   controllers: [ProductController],

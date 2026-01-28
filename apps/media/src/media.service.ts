@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { initCloudinary } from './cloudinary/cloudinary.client';
 import { InjectModel } from '@nestjs/mongoose';
 import { Media, MediaDocument } from './media/media.schema';
@@ -9,6 +9,7 @@ import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class MediaService {
+  private readonly logger = new Logger(MediaService.name);
   private readonly cloudinary = initCloudinary();
   constructor(
     @InjectModel(Media.name) private mediaModel: Model<MediaDocument>,
@@ -68,9 +69,11 @@ export class MediaService {
       uploadByUserId,
       productId: undefined,
     });
+    this.logger.log(`Image uploaded and saved: ${media._id} (URL: ${url})`);
     return { mediaId: String(media._id), url, publicId };
   }
 
+  //attach media to product
   async attachToProduct(attachedToProductDto: AttachedToProductDto) {
     const { mediaId, productId } = attachedToProductDto;
 
@@ -86,8 +89,11 @@ export class MediaService {
       )
       .exec();
     if (!updatedMedia) {
+      this.logger.warn(`Attach failed: Media not found ${mediaId}`);
       rpcBadRequest('Media not found');
     }
+
+    this.logger.log(`Media ${mediaId} attached to product ${productId}`);
 
     return {
       mediaId: String(updatedMedia?._id),
@@ -96,6 +102,44 @@ export class MediaService {
       publicId: updatedMedia?.publicId,
     };
   }
+
+  //delete media by product id
+  async deleteMediaByProductId(productId: string) {
+    // 1. Find all media for this product
+    const medias = await this.mediaModel.find({ productId }).exec();
+
+    if (medias.length === 0) {
+      return;
+    }
+
+    // 2. Delete each from Cloudinary
+    const deletionPromises = medias.map(async (media) => {
+      try {
+        await new Promise((resolve, reject) => {
+          this.cloudinary.uploader.destroy(media.publicId, (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result);
+            }
+          });
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to delete image ${media.publicId} from Cloudinary`,
+          error,
+        );
+        // We continue even if one fails
+      }
+    });
+
+    await Promise.all(deletionPromises);
+
+    // 3. Delete from database
+    await this.mediaModel.deleteMany({ productId }).exec();
+    this.logger.log(`All media for product ${productId} deleted from DB and Cloudinary`);
+  }
+
   ping() {
     return {
       status: 'Ok',

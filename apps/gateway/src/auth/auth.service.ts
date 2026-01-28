@@ -1,5 +1,5 @@
 import { createClerkClient, verifyToken } from '@clerk/backend';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { VerifiedAuthUser } from './auth.types';
 
 interface JWTPayload {
@@ -10,6 +10,7 @@ interface JWTPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly clerk = createClerkClient({
     secretKey: process.env.CLERK_SECRET_KEY,
     publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
@@ -81,7 +82,7 @@ export class AuthService {
         role,
       };
     } catch (error) {
-      console.log(error);
+      this.logger.error('Clerk token verification failed', error);
       throw new UnauthorizedException('Invalid or Expired token');
     }
   }

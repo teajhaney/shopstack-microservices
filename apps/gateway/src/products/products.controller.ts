@@ -6,6 +6,7 @@ import {
   Delete,
   Get,
   Inject,
+  Logger,
   Param,
   Patch,
   Post,
@@ -33,6 +34,7 @@ import {
 
 @Controller('products')
 export class ProductsHttpController {
+  private readonly logger = new Logger(ProductsHttpController.name);
   constructor(
     @Inject('CATALOG_CLIENT') private readonly catalogClient: ClientProxy,
     @Inject('MEDIA_CLIENT') private readonly mediaClient: ClientProxy,
@@ -52,6 +54,9 @@ export class ProductsHttpController {
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() createProductDto: CreateProductDto,
   ) {
+    this.logger.log(
+      `Creating product: ${createProductDto.name} by user: ${user.clerkUserId}`,
+    );
     const { name, description, price, status } = createProductDto;
     let imageUrl = createProductDto.imageUrl;
     let mediaId: string | undefined = undefined;
@@ -163,6 +168,7 @@ export class ProductsHttpController {
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
   ) {
+    this.logger.log(`Updating product: ${id}`);
     const { name, description, price, imageUrl, status } = updateProductDto;
     let updatedProduct: Product;
     const payload = {
@@ -185,9 +191,11 @@ export class ProductsHttpController {
       mapRpcErrorToHttp(error);
     }
   }
+
   @Delete(':id')
   @AdminOnly()
   async delectProductById(@Param('id') id: string) {
+    this.logger.log(`Deleting product: ${id}`);
     const payload = {
       id,
     };

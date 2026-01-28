@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, HttpException } from '@nestjs/common';
+import { ArgumentsHost, Catch, HttpException, Logger } from '@nestjs/common';
 import { BaseRpcExceptionFilter, RpcException } from '@nestjs/microservices';
 import { Request, Response } from 'express';
 import { RpcErrorPayLoad } from './rpc.types';
@@ -8,12 +8,14 @@ import { RpcErrorPayLoad } from './rpc.types';
 // our payload structure should follow the RpcErrorPayLoad interface we want
 @Catch()
 export class RpcAllExceptionsFilter extends BaseRpcExceptionFilter {
+  private readonly logger = new Logger(RpcAllExceptionsFilter.name);
+
   catch(exception: any, host: ArgumentsHost) {
     if (exception instanceof RpcException) {
       return super.catch(exception, host);
     }
 
-    console.error('[RpcAllExceptionsFilter] Exception caught:', exception);
+    this.logger.error('Exception caught in RPC Filter:', exception);
 
     const status =
       exception instanceof HttpException

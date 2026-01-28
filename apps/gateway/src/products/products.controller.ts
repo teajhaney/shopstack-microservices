@@ -1,3 +1,5 @@
+//This controller is for the gateway to handle requests from the client to the catalog microservice which contains the business logic for products
+
 import {
   Body,
   Controller,
@@ -14,43 +16,20 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import { CurrentUser } from '../auth/current.user.decorator';
 import type { UserContext } from '../auth/auth.types';
-import { CreateProductDto, UpdateProductDto } from './product.dto';
+import {
+  CreateProductDto,
+  PaginatedProductsResponse,
+  UpdateProductDto,
+} from './product.dto';
 import { mapRpcErrorToHttp } from '@app/rpc';
 import { firstValueFrom } from 'rxjs';
 import { AdminOnly } from '../auth/admin.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
-
-export type Product = {
-  _id: string;
-  name: string;
-  description: string;
-  price: number;
-  status: 'DRAFT' | 'ACTIVE';
-  imageUrl: string;
-  createdByClerkUserId: string;
-};
-export type UploadProductResponse = {
-  url: string;
-  mediaId: string;
-};
-
-export type AttachedToProductResponse = {
-  mediaId: string;
-  productId: string;
-  attchedByUserId: string;
-};
-
-export class PaginatedProductsResponse {
-  products: any[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
+import {
+  AttachedToProductResponse,
+  Product,
+  UploadProductResponse,
+} from './product.type';
 
 @Controller('products')
 export class ProductsHttpController {
@@ -80,8 +59,7 @@ export class ProductsHttpController {
     if (file) {
       const base64 = file.buffer.toString('base64');
 
-		
-		//upload image to cloudinary and add to db
+      //upload image to cloudinary and add to db
       try {
         const uploadResult: { url: string; mediaId: string } =
           await firstValueFrom(
@@ -122,8 +100,7 @@ export class ProductsHttpController {
       mapRpcErrorToHttp(error);
     }
 
-	  
-	  //add product Id to image 
+    //add product Id to image
     if (mediaId && product) {
       try {
         await firstValueFrom(

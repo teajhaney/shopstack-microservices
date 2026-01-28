@@ -7,7 +7,6 @@ import { ProductModule } from './products/products.module';
 
 @Module({
   imports: [
-    //loads .env into process.env
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URI_CATALOG as string),
     ProductModule,

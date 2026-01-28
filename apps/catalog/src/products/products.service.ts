@@ -10,12 +10,14 @@ import {
   PaginatedProductsResponse,
 } from './product.dto';
 import { rpcBadRequest } from '@app/rpc';
+import { ProductEventsPublisher } from '../events/product-events.publisher';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
+    private readonly event: ProductEventsPublisher,
   ) {}
 
   // Create a new product
@@ -42,6 +44,18 @@ export class ProductService {
       imageUrl: imageUrl || '',
       createdByClerkUserId,
     });
+
+    //emit event to search microservice
+    this.event.productCreated({
+      productId: String(createdProduct._id),
+      name: createdProduct.name,
+      description: createdProduct.description,
+      status: createdProduct.status,
+      price: createdProduct.price,
+      imageUrl: createdProduct.imageUrl,
+      createdByClerkUserId: createdProduct.createdByClerkUserId,
+    });
+
     return createdProduct;
   }
 

@@ -37,7 +37,7 @@ import Redis from 'ioredis';
         name: 'CATALOG_CLIENT',
         transport: Transport.RMQ,
         options: {
-          url: [process.env.RABBITMQ_URL ?? 'amqp://localhost:5672'],
+          urls: [process.env.RABBITMQ_URL ?? 'amqp://localhost:5672'],
           queue: process.env.CATALOG_QUEUE ?? 'catalog_queue',
           queueOptions: {
             durable: false,

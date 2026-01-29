@@ -102,6 +102,7 @@ export class ProductsHttpController {
         this.catalogClient.send<Product>('product.create', payload),
       );
     } catch (error) {
+      this.logger.error(`Failed to create product in Catalog: ${error.message}`, error.stack);
       mapRpcErrorToHttp(error);
     }
 

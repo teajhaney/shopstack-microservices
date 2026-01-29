@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Product, ProductDocument } from './product.schema';
+import { Product } from './product.schema';
+import type { ProductDocument } from './product.schema';
 import { isValidObjectId, Model } from 'mongoose';
 import {
   CreateProductDto,
@@ -11,6 +12,8 @@ import {
 } from './product.dto';
 import { rpcBadRequest } from '@app/rpc';
 import { ProductEventsPublisher } from '../events/product-events.publisher';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class ProductService {
@@ -20,6 +23,7 @@ export class ProductService {
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
     private readonly event: ProductEventsPublisher,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   // Create a new product
@@ -59,6 +63,9 @@ export class ProductService {
       imageUrl: createdProduct.imageUrl,
       createdByClerkUserId: createdProduct.createdByClerkUserId,
     });
+
+    //invalidate list cache (simple approach: clear all product related cache)
+    await this.cacheManager.del('products_list');
 
     return createdProduct;
   }
@@ -105,14 +112,25 @@ export class ProductService {
   async getProductById(
     getProductByIdDto: GetProductByIdDto,
   ): Promise<ProductDocument | null> {
-    if (!isValidObjectId(getProductByIdDto.id)) {
+    const { id } = getProductByIdDto;
+    if (!isValidObjectId(id)) {
       rpcBadRequest('Invalid product id');
     }
-    const product = await this.productModel
-      .findById(getProductByIdDto.id)
-      .exec();
+
+    const cacheKey = `product_${id}`;
+    const cachedProduct =
+      await this.cacheManager.get<ProductDocument>(cacheKey);
+    if (cachedProduct) {
+      this.logger.log(`Cache hit for product: ${id}`);
+      return cachedProduct;
+    }
+
+    const product = await this.productModel.findById(id).exec();
 
     if (!product) rpcBadRequest('Product not found');
+
+    this.logger.log(`Cache miss for product: ${id}`);
+    await this.cacheManager.set(cacheKey, product, 60000); // cache for 1 minute
 
     return product;
   }
@@ -148,6 +166,11 @@ export class ProductService {
       this.logger.warn(`Update failed: Product not found ${id}`);
       rpcBadRequest('Product not found');
     }
+
+    // Invalidate cache
+    await this.cacheManager.del(`product_${id}`);
+    await this.cacheManager.del('products_list');
+
     this.logger.log(`Product updated successfully: ${id}`);
     return updatedProduct.toObject();
   }
@@ -159,6 +182,10 @@ export class ProductService {
     }
     await this.productModel.findByIdAndDelete(deleteProductByIdDto.id);
     this.logger.log(`Product deleted from DB: ${deleteProductByIdDto.id}`);
+
+    // Invalidate cache
+    await this.cacheManager.del(`product_${deleteProductByIdDto.id}`);
+    await this.cacheManager.del('products_list');
 
     //emit event to search and media microservices for cleanup
     this.event.productDeleted(deleteProductByIdDto.id);

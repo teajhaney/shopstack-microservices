@@ -8,11 +8,25 @@ import { UserModule } from './users/user.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsHttpController } from './products/products.controller';
 import { SearchHttpController } from './products/search.controller';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
+import Redis from 'ioredis';
 
 @Module({
   imports: [
     //loads .env into process.env
     ConfigModule.forRoot({ isGlobal: true }),
+
+    // Rate limiting configuration
+    ThrottlerModule.forRootAsync({
+      useFactory: () => ({
+        throttlers: [{ ttl: 60000, limit: 100 }],
+        storage: new ThrottlerStorageRedisService(
+          new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379'),
+        ),
+      }),
+    }),
 
     //connect our gateway to mongodb
     MongooseModule.forRoot(process.env.MONGO_URI_USERS as string),
@@ -59,6 +73,12 @@ import { SearchHttpController } from './products/search.controller';
     ProductsHttpController,
     SearchHttpController,
   ],
-  providers: [GatewayService],
+  providers: [
+    GatewayService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class GatewayModule {}

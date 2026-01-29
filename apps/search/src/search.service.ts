@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Search, SearchDocument } from './search/search.schema';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ProductCreatedDto } from './events/product-events.dto';
 import { SearchQueryDto } from './search/search-query.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Search, SearchDocument } from './search/search.schema';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class SearchService {
@@ -12,6 +14,7 @@ export class SearchService {
   constructor(
     @InjectModel(Search.name)
     private readonly searchModel: Model<SearchDocument>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   normalisedText(input: { name: string; description: string }) {
@@ -46,7 +49,9 @@ export class SearchService {
   //delete product from search index
   async deleteByProductId(productId: string) {
     const result = await this.searchModel.deleteMany({ productId }).exec();
-    this.logger.log(`Search index deleted for product: ${productId} (Removed: ${result.deletedCount})`);
+    this.logger.log(
+      `Search index deleted for product: ${productId} (Removed: ${result.deletedCount})`,
+    );
   }
 
   //search products
@@ -69,6 +74,15 @@ export class SearchService {
 
     const page = input.page ?? 1;
     const limit = Math.min(Math.max(input.limit ?? 10, 1), 20);
+
+    const cacheKey = `search_${query}_${page}_${limit}`;
+    const cachedResult = await this.cacheManager.get<any>(cacheKey);
+
+    if (cachedResult) {
+      this.logger.log(`Cache hit for search: ${query}`);
+      return cachedResult;
+    }
+
     const skip = (page - 1) * limit;
 
     const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -99,7 +113,7 @@ export class SearchService {
 
     this.logger.log(`Executed search query - Found: ${total} results`);
 
-    return {
+    const result = {
       products,
       pagination: {
         page,
@@ -110,6 +124,10 @@ export class SearchService {
         hasPrev: page > 1,
       },
     };
+
+    await this.cacheManager.set(cacheKey, result, 30000); // 30s cache
+
+    return result;
   }
 
   //health

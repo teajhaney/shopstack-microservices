@@ -1,98 +1,139 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# ShopStack: E-Commerce Microservices
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+ShopStack is a high-performance, distributed e-commerce backend built with **NestJS**, designed to demonstrate modern microservices architecture, event-driven communication, and robust DevOps practices.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🏗 Architecture Overview
 
-## Description
+ShopStack follows a **Microservices Architecture** pattern, leveraging **RabbitMQ** for asynchronous, event-driven communication between services.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```mermaid
+graph TD
+    User([User]) --> Gateway[API Gateway]
+    
+    subgraph "Internal Network"
+        Gateway -->|RPC| Catalog[Catalog Service]
+        Gateway -->|RPC| Media[Media Service]
+        Gateway -->|RPC| Search[Search Service]
+        
+        Catalog -->|Pub/Sub| Search
+        Catalog -->|Pub/Sub| Media
+    end
+    
+    subgraph "Infrastructure"
+        Gateway --- Redis[(Redis Cache/Rate Limit)]
+        Catalog --- MongoDB_C[(MongoDB Catalog)]
+        Search --- MongoDB_S[(MongoDB Search)]
+        Media --- MongoDB_M[(MongoDB Media)]
+        All --- RMQ[[RabbitMQ]]
+    end
+    
+    subgraph "External Cloud"
+        Gateway --- Clerk[Clerk Auth]
+        Media --- Cloudinary[Cloudinary Storage]
+    end
 ```
 
-## Compile and run the project
+### Core Services
 
-```bash
-# development
-$ npm run start
+1.  **API Gateway**: The entry point for all client requests.
+    *   **Features**: JWT Authentication (Clerk), Distributed Rate Limiting (Redis), RPC Routing.
+2.  **Catalog Service**: The source of truth for product data.
+    *   **Features**: CRUD operations, Product state management, Event publishing on product changes.
+3.  **Search Service**: Optimized for product discovery.
+    *   **Features**: Highly performant search queries, Data synchronization via RMQ events, Query caching (Redis).
+4.  **Media Service**: Handles asset management.
+    *   **Features**: Image upload processing, Cloudinary integration, Media metadata tracking.
+5.  **RPC Library**: A shared internal library (`@app/rpc`) for standardized error handling, decorators, and RMQ communication patterns.
 
-# watch mode
-$ npm run start:dev
+---
 
-# production mode
-$ npm run start:prod
+## 🚀 Tech Stack
+
+*   **Framework**: [NestJS](https://nestjs.com/) (Node.js)
+*   **Language**: TypeScript
+*   **Communication**: RabbitMQ (Message Broker)
+*   **Databases**: MongoDB (Mongoose), Redis (Caching & Rate Limiting)
+*   **Authentication**: [Clerk](https://clerk.com/)
+*   **Media Hosting**: [Cloudinary](https://cloudinary.com/)
+*   **Containerization**: Docker & Docker Compose (Planned/In-Progress)
+
+---
+
+## ✨ Key Features
+
+*   **Event-Driven Consistency**: Uses RabbitMQ to sync search indices and media associations when products are created or modified.
+*   **Secure by Design**: Integrated Clerk middleware for robust identity management and role-based access control.
+*   **Resilient Performance**: Distributed rate limiting and global query caching ensure the system scales gracefully.
+*   **Shared RPC Layer**: Consistent error mapping between microservices and HTTP clients using a custom-built shared library.
+
+---
+
+## 🛠 Setup & Installation
+
+### Prerequisites
+
+*   Node.js (v20+)
+*   Docker (for infra) or local instances of:
+    *   RabbitMQ
+    *   Redis
+*   MongoDB Atlas or local MongoDB
+
+### Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```env
+# Infrastructure
+RABBITMQ_URL=amqp://localhost:5672
+REDIS_URL=redis://localhost:6379
+
+# Database URIs
+MONGO_URI_USERS=...
+MONGO_URI_CATALOG=...
+MONGO_URI_SEARCH=...
+MONGO_URI_MEDIA=...
+
+# Auth (Clerk)
+CLERK_SECRET_KEY=...
+CLERK_PUBLISHABLE_KEY=...
+
+# Media (Cloudinary)
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
 ```
 
-## Run tests
+### Installation
 
 ```bash
-# unit tests
-$ npm run test
+# Install dependencies
+npm install
 
-# e2e tests
-$ npm run test:e2e
+# Start infrastructure (if using Docker Compose)
+docker-compose up -d rabbitmq redis
 
-# test coverage
-$ npm run test:cov
+# Start services in development mode
+npm run start:dev gateway
+npm run start:dev catalog
+npm run start:dev search
+npm run start:dev media
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 📜 API Endpoints (Gateway)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+| Method | Endpoint | Description | Auth |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/products` | Create a new product (with image) | Admin |
+| `GET` | `/products/list` | List paginated products | Public |
+| `GET` | `/products/:id` | Get product details | Public |
+| `PATCH` | `/products/:id` | Update product details | Admin |
+| `DELETE` | `/products/:id` | Delete a product | Admin |
+| `GET` | `/products/search` | Search products | Public |
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+---
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 🤝 Contributing
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is a portfolio piece demonstrating distributed system patterns. Feel free to explore and provide feedback.
